@@ -1,0 +1,37 @@
+# Save as: ~/.config/tmuxinator/myworkspace.yml
+# Start with: tmuxinator start myworkspace
+
+name: myworkspace
+
+windows:
+  - terminals:
+      layout: tiled
+      panes:
+        # Pane 1: uife then npm run test
+        - test:
+            - uife
+            - npm run test
+
+        # Pane 2: npm run tcv
+        - design-system:
+            - uife
+            - npm run tcv
+
+        # Pane 3: npm run storybook
+        - storybook:
+            - uife
+            - npm run storybook
+
+        # Pane 4: Empty pane for general use
+        - echo "Ready for commands"
+
+  - editor:
+      panes:
+        - nvim in FE:
+            - uife
+            - nvim
+
+  - projects:
+      panes:
+        - - cd ~/Projects
+          - nvim
