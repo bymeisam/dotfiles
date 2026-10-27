@@ -49,7 +49,7 @@ It takes a few minutes and is safe to re-run. If it stops after the Xcode popup,
 | Search & files | `fzf` `ripgrep` `fd` `bat` `eza` `zoxide` | same (`fdfind`/`batcat` linked as `fd`/`bat`) |
 | Git | `git-delta` `lazygit` `gh` | same (gh: install manually) |
 | Terminal | `tmux` `tmuxinator` | same |
-| Misc | `jq` `direnv` `httpie` `tldr` `htop` `stow` | same |
+| Misc | `jq` `direnv` `httpie` `tlrc` (the `tldr` command) `htop` `stow` | same (apt `tldr`) |
 | Font | JetBrainsMono Nerd Font | — (install manually) |
 | Optional | `mise` with `--with-mise` | same |
 

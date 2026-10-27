@@ -135,7 +135,7 @@ info "Installing CLI tools..."
 if [ "$OS" = "Darwin" ]; then
   brew install \
     tmux neovim fzf ripgrep fd bat eza zoxide jq gh starship \
-    git-delta lazygit direnv httpie tldr htop stow tmuxinator
+    git-delta lazygit direnv httpie tlrc htop stow tmuxinator
   # LazyVim: tree-sitter builds parsers (nvim-treesitter main branch);
   # node runs Copilot + mason's npm-based LSPs (project versions still come
   # from the team's version manager, which takes precedence on PATH)
