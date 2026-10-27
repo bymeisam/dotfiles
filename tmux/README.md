@@ -22,9 +22,10 @@ Tmux configuration optimized for LazyVim and development workflow.
 
 ## Installation
 
+Installed by `install.sh`, which symlinks `tmux.conf` → `~/.tmux.conf`. The file isn't a stow package, so it can stay visible in the repo. To link it on its own:
+
 ```bash
-# Create symlink to tmux config
-ln -sf $(pwd)/tmux.conf ~/.tmux.conf
+ln -sfn ~/.dotfiles/tmux/tmux.conf ~/.tmux.conf
 
 # Reload tmux configuration (if tmux is running)
 tmux source-file ~/.tmux.conf
@@ -105,11 +106,4 @@ All bindings start with `Ctrl+Space` (prefix):
 
 ## Customization
 
-The configuration is modular and well-commented. Key sections:
-
-- **Lines 3-6**: Prefix key configuration
-- **Lines 21-29**: Pane splitting keybindings
-- **Lines 31-41**: Navigation and resizing
-- **Lines 46-52**: Copy mode (Vi-style)
-- **Lines 66-74**: Color and performance tuning
-- **Lines 76-88**: Status bar appearance
+Edit `tmux.conf` in this folder (it is symlinked), then reload with `Ctrl+Space` `r`.

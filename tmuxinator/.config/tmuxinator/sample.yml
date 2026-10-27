@@ -1,0 +1,36 @@
+# Template workspace — don't edit this one, copy it:
+#   tmuxinator copy sample myproject   # creates ~/.config/tmuxinator/myproject.yml (local, not in git)
+#   tmuxinator edit myproject
+#   tmuxinator start myproject
+#
+# Layouts: tiled, even-horizontal, even-vertical, main-vertical, main-horizontal
+
+name: sample
+root: ~/projects/my-app            # every pane starts here
+
+# runs in every pane before its commands (e.g. load a node version)
+# pre_window: nvm use
+
+windows:
+  # several dev processes side by side
+  - terminals:
+      layout: tiled
+      panes:
+        - test:                    # named pane with multiple commands
+            - npm run test
+        - storybook:
+            - npm run storybook
+        - dev:
+            - npm run dev
+        - ""                       # empty shell
+
+  # editor with a small shell next to it
+  - editor:
+      layout: main-vertical
+      panes:
+        - nvim
+        - ""
+
+  - git:
+      panes:
+        - lazygit

@@ -1,8 +1,29 @@
 #!/usr/bin/env bash
+# Bootstrap a new machine. Safe to re-run.
+#
+#   git clone https://github.com/bymeisam/dotfiles.git ~/.dotfiles
+#   ~/.dotfiles/install.sh [--with-mise]
 set -e
 
 DOTFILES="$(cd "$(dirname "$0")" && pwd)"
 OS="$(uname -s)"
+WITH_MISE=0
+
+for arg in "$@"; do
+  case "$arg" in
+    --with-mise) WITH_MISE=1 ;;
+    -h|--help)
+      echo "usage: install.sh [--with-mise]"
+      echo "  --with-mise   also install mise (node/go/... version manager)"
+      exit 0
+      ;;
+    *) echo "unknown option: $arg" >&2; exit 1 ;;
+  esac
+done
+
+# stow packages: each folder mirrors $HOME (README files are ignored by stow)
+STOW_PACKAGES=(zsh git tmuxinator starship)
+NVIM_REPO="https://github.com/bymeisam/lazyvim.git"
 
 echo ""
 echo "==> dotfiles install"
@@ -13,6 +34,7 @@ echo ""
 # ── helpers ───────────────────────────────────────────────────────────────────
 info()    { echo "  [·] $1"; }
 success() { echo "  [✓] $1"; }
+warn()    { echo "  [!] $1"; }
 error()   { echo "  [✗] $1" >&2; exit 1; }
 
 install_pkg() {
@@ -25,25 +47,46 @@ install_pkg() {
   fi
 }
 
-# ── move dotfiles to ~/.dotfiles if not already there ────────────────────────
+# move aside real files that would block stow (existing symlinks are left alone)
+backup_conflicts() {
+  local pkg="$1" rel target
+  while IFS= read -r rel; do
+    target="$HOME/${rel#./}"
+    if [ -e "$target" ] && [ ! -L "$target" ]; then
+      info "Backing up $target -> $target.bak"
+      mv "$target" "$target.bak"
+    fi
+  done < <(cd "$DOTFILES/$pkg" && find . -type f ! -name 'README*' ! -name '.DS_Store')
+}
+
 if [ "$DOTFILES" != "$HOME/.dotfiles" ]; then
-  info "Moving dotfiles to ~/.dotfiles..."
-  cp -r "$DOTFILES" "$HOME/.dotfiles"
-  DOTFILES="$HOME/.dotfiles"
-  success "Dotfiles moved to ~/.dotfiles"
+  warn "Repo is at $DOTFILES (expected ~/.dotfiles) — symlinks will point here, so don't move or delete it."
 fi
 
 # ── package manager ───────────────────────────────────────────────────────────
 if [ "$OS" = "Darwin" ]; then
+  if ! xcode-select -p &>/dev/null; then
+    info "Installing Xcode Command Line Tools (finish the popup, then re-run this script)..."
+    xcode-select --install
+    exit 0
+  fi
+
   if ! command -v brew &>/dev/null; then
     info "Installing Homebrew..."
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   else
     success "Homebrew already installed"
+  fi
+  # make brew usable for the rest of this script (Apple Silicon vs Intel)
+  if [ -x /opt/homebrew/bin/brew ]; then
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+  elif [ -x /usr/local/bin/brew ]; then
+    eval "$(/usr/local/bin/brew shellenv)"
   fi
 elif [ "$OS" = "Linux" ]; then
   info "Updating apt..."
   sudo apt-get update -qq
+  install_pkg git curl wget
 fi
 
 # ── zsh ───────────────────────────────────────────────────────────────────────
@@ -54,16 +97,16 @@ else
   success "zsh already installed"
 fi
 
-# set zsh as default shell
-if [ "$SHELL" != "$(which zsh)" ]; then
+# set zsh as default shell (macOS already defaults to /bin/zsh)
+if [ "$(basename "$SHELL")" != "zsh" ]; then
   info "Setting zsh as default shell..."
-  chsh -s "$(which zsh)"
+  chsh -s "$(command -v zsh)" || warn "chsh failed — run: chsh -s $(command -v zsh)"
 fi
 
 # ── oh-my-zsh ─────────────────────────────────────────────────────────────────
 if [ ! -d "$HOME/.oh-my-zsh" ]; then
   info "Installing oh-my-zsh..."
-  RUNZSH=no CHSH=no sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+  RUNZSH=no CHSH=no KEEP_ZSHRC=yes sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 else
   success "oh-my-zsh already installed"
 fi
@@ -86,24 +129,23 @@ else
   success "zsh-syntax-highlighting already installed"
 fi
 
-# powerlevel10k
-if [ ! -d "$ZSH_CUSTOM/themes/powerlevel10k" ]; then
-  info "Installing powerlevel10k..."
-  git clone --depth=1 https://github.com/romkatv/powerlevel10k.git "$ZSH_CUSTOM/themes/powerlevel10k"
-else
-  success "powerlevel10k already installed"
-fi
-
 # ── cli tools ─────────────────────────────────────────────────────────────────
 info "Installing CLI tools..."
 
 if [ "$OS" = "Darwin" ]; then
   brew install \
-    tmux neovim fzf ripgrep fd bat eza zoxide jq \
-    git-delta lazygit fnm direnv httpie tldr htop stow tmuxinator
+    tmux neovim fzf ripgrep fd bat eza zoxide jq gh starship \
+    git-delta lazygit direnv httpie tldr htop stow tmuxinator
+  # eza --icons and starship need a Nerd Font (set it in your terminal)
+  brew install --cask font-jetbrains-mono-nerd-font
 
 elif [ "$OS" = "Linux" ]; then
-  sudo apt-get install -y tmux neovim fzf ripgrep fd-find bat jq direnv tldr htop stow
+  sudo apt-get install -y tmux neovim fzf ripgrep fd-find bat jq direnv tldr htop stow ruby
+
+  # Debian/Ubuntu ship these under different names — the aliases expect fd/bat
+  mkdir -p "$HOME/.local/bin"
+  command -v fdfind &>/dev/null && ln -sf "$(command -v fdfind)" "$HOME/.local/bin/fd"
+  command -v batcat &>/dev/null && ln -sf "$(command -v batcat)" "$HOME/.local/bin/bat"
 
   if ! command -v eza &>/dev/null; then
     info "Installing eza..."
@@ -114,6 +156,11 @@ elif [ "$OS" = "Linux" ]; then
   if ! command -v zoxide &>/dev/null; then
     info "Installing zoxide..."
     curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh
+  fi
+
+  if ! command -v starship &>/dev/null; then
+    info "Installing starship..."
+    curl -sS https://starship.rs/install.sh | sh -s -- -y
   fi
 
   if ! command -v delta &>/dev/null; then
@@ -130,11 +177,6 @@ elif [ "$OS" = "Linux" ]; then
     sudo install /tmp/lazygit /usr/local/bin
   fi
 
-  if ! command -v fnm &>/dev/null; then
-    info "Installing fnm..."
-    curl -fsSL https://fnm.vercel.app/install | bash
-  fi
-
   if ! command -v http &>/dev/null; then
     info "Installing httpie..."
     pip3 install httpie --break-system-packages 2>/dev/null || true
@@ -142,29 +184,40 @@ elif [ "$OS" = "Linux" ]; then
 
   if ! command -v tmuxinator &>/dev/null; then
     info "Installing tmuxinator..."
-    gem install tmuxinator
+    sudo gem install tmuxinator
   fi
 fi
 
 success "CLI tools installed"
 
+# ── version manager (opt-in) ──────────────────────────────────────────────────
+if [ "$WITH_MISE" = 1 ]; then
+  if ! command -v mise &>/dev/null; then
+    info "Installing mise..."
+    if [ "$OS" = "Darwin" ]; then brew install mise; else curl -fsSL https://mise.run | sh; fi
+  else
+    success "mise already installed"
+  fi
+fi
+
 # ── stow symlinks ─────────────────────────────────────────────────────────────
 info "Stowing dotfiles..."
 cd "$DOTFILES"
 
-# back up and remove any existing files that would block stow
-for f in ~/.zshrc ~/.tmux.conf ~/.gitconfig ~/.gitignore_global; do
-  if [ -f "$f" ] && [ ! -L "$f" ]; then
-    info "Backing up $f -> $f.bak"
-    mv "$f" "$f.bak"
-  fi
+for pkg in "${STOW_PACKAGES[@]}"; do
+  backup_conflicts "$pkg"
+  # --no-folding: link files, never whole dirs (so ~/.config stays a real dir)
+  stow --no-folding --restow --target="$HOME" "$pkg"
 done
 
-stow --target="$HOME" zsh
-stow --target="$HOME" tmux
-stow --target="$HOME" git
+# tmux.conf is kept visible in the repo, so it's linked by hand rather than stowed
+if [ -e "$HOME/.tmux.conf" ] && [ ! -L "$HOME/.tmux.conf" ]; then
+  info "Backing up $HOME/.tmux.conf -> $HOME/.tmux.conf.bak"
+  mv "$HOME/.tmux.conf" "$HOME/.tmux.conf.bak"
+fi
+ln -sfn "$DOTFILES/tmux/tmux.conf" "$HOME/.tmux.conf"
 
-# ssh config
+# ssh config is copied, not linked — it usually gains machine-specific hosts
 mkdir -p "$HOME/.ssh"
 chmod 700 "$HOME/.ssh"
 if [ ! -f "$HOME/.ssh/config" ]; then
@@ -172,18 +225,24 @@ if [ ! -f "$HOME/.ssh/config" ]; then
   chmod 600 "$HOME/.ssh/config"
 fi
 
-# tmuxinator
-mkdir -p "$HOME/.tmuxinator"
-[ ! -f "$HOME/.tmuxinator/dev.yml" ] && cp "$DOTFILES/tmuxinator/dev.yml" "$HOME/.tmuxinator/dev.yml"
-
 success "Dotfiles symlinked"
 
-# ── git global ignore ─────────────────────────────────────────────────────────
-git config --global core.excludesfile "$HOME/.gitignore_global"
+# ── neovim (LazyVim config lives in its own repo) ─────────────────────────────
+if [ ! -d "$HOME/.config/nvim" ]; then
+  info "Cloning LazyVim config..."
+  git clone "$NVIM_REPO" "$HOME/.config/nvim"
+elif [ ! -d "$HOME/.config/nvim/.git" ]; then
+  info "Backing up ~/.config/nvim -> ~/.config/nvim.bak"
+  mv "$HOME/.config/nvim" "$HOME/.config/nvim.bak"
+  git clone "$NVIM_REPO" "$HOME/.config/nvim"
+else
+  success "nvim config already present"
+fi
 
-# ── reload shell ──────────────────────────────────────────────────────────────
-info "Reloading shell config..."
-source "$HOME/.zshrc" 2>/dev/null || true
+# ── local overrides ───────────────────────────────────────────────────────────
+if [ ! -f "$HOME/.zshrc.local" ]; then
+  echo "# machine-local zsh config (not tracked in dotfiles)" > "$HOME/.zshrc.local"
+fi
 
 # ── done ──────────────────────────────────────────────────────────────────────
 echo ""
@@ -192,7 +251,8 @@ echo ""
 echo "    next steps:"
 echo "    1. update email in ~/.gitconfig"
 echo "    2. generate ssh key: ssh-keygen -t ed25519 -C 'your@email.com'"
-echo "    3. install LazyVim: https://www.lazyvim.org"
-echo "    4. install node: fnm install --lts"
-echo "    5. run 'p10k configure' to set up your prompt"
+echo "       then add it to GitHub: gh auth login"
+echo "    3. switch nvim remote to ssh: git -C ~/.config/nvim remote set-url origin git@github.com:bymeisam/lazyvim.git"
+echo "    4. set your terminal font to 'JetBrainsMono Nerd Font'"
+echo "    5. install a version manager if needed (re-run with --with-mise, or use the team's choice)"
 echo ""

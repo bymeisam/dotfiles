@@ -1,6 +1,14 @@
+# ── homebrew ──────────────────────────────────────────────────────────────────
+# fresh Apple Silicon Macs don't have /opt/homebrew/bin on PATH
+if [ -x /opt/homebrew/bin/brew ]; then
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+elif [ -x /usr/local/bin/brew ]; then
+  eval "$(/usr/local/bin/brew shellenv)"
+fi
+
 # ── oh-my-zsh ────────────────────────────────────────────────────────────────
 export ZSH="$HOME/.oh-my-zsh"
-ZSH_THEME=""  # using custom prompt below
+ZSH_THEME=""  # prompt comes from starship below
 plugins=(
   git
   zsh-autosuggestions
@@ -10,24 +18,33 @@ plugins=(
 )
 source $ZSH/oh-my-zsh.sh
 
-# ── prompt ────────────────────────────────────────────────────────────────────
-git_branch() {
-  git branch --show-current 2>/dev/null | sed 's/\(.*\)/ (\1)/'
-}
-PROMPT='-> %1~ $(git_branch) '
-
 # ── path ──────────────────────────────────────────────────────────────────────
 export PATH="$HOME/.local/bin:$HOME/bin:/usr/local/bin:$PATH"
+[ -d /Applications/Docker.app ] && export PATH="/Applications/Docker.app/Contents/Resources/bin:$PATH"
+[ -d "$HOME/.opencode/bin" ] && export PATH="$HOME/.opencode/bin:$PATH"
 
-# ── fnm (node version manager) ───────────────────────────────────────────────
-export FNM_PATH="$HOME/.local/share/fnm"
-if [ -d "$FNM_PATH" ]; then
-  export PATH="$FNM_PATH:$PATH"
+# ── prompt ────────────────────────────────────────────────────────────────────
+if command -v starship &>/dev/null; then
+  eval "$(starship init zsh)"
+else
+  git_branch() {
+    git branch --show-current 2>/dev/null | sed 's/\(.*\)/ (\1)/'
+  }
+  setopt PROMPT_SUBST
+  PROMPT='-> %1~ $(git_branch) '
+fi
+
+# ── version managers (optional) ──────────────────────────────────────────────
+# Not installed by default — use whatever the team uses. Each one activates
+# only if present. mise also reads .nvmrc / .node-version / .tool-versions.
+if command -v mise &>/dev/null; then
+  eval "$(mise activate zsh)"
+elif command -v fnm &>/dev/null; then
   eval "$(fnm env --use-on-cd)"
 fi
 
 # ── zoxide (smart cd) ─────────────────────────────────────────────────────────
-eval "$(zoxide init zsh)"
+command -v zoxide &>/dev/null && eval "$(zoxide init zsh)"
 
 # ── fzf ───────────────────────────────────────────────────────────────────────
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
@@ -63,3 +80,7 @@ alias reload='source ~/.zshrc'
 export EDITOR='nvim'
 export VISUAL='nvim'
 export LANG='en_AU.UTF-8'
+
+# ── machine-local overrides (not in git) ─────────────────────────────────────
+# work aliases, secrets, per-laptop PATH tweaks go in ~/.zshrc.local
+[ -f ~/.zshrc.local ] && source ~/.zshrc.local
