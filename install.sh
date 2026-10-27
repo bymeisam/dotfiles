@@ -136,11 +136,45 @@ if [ "$OS" = "Darwin" ]; then
   brew install \
     tmux neovim fzf ripgrep fd bat eza zoxide jq gh starship \
     git-delta lazygit direnv httpie tldr htop stow tmuxinator
+  # LazyVim: tree-sitter builds parsers (nvim-treesitter main branch);
+  # node runs Copilot + mason's npm-based LSPs (project versions still come
+  # from the team's version manager, which takes precedence on PATH)
+  brew install tree-sitter-cli node
   # eza --icons and starship need a Nerd Font (set it in your terminal)
   brew install --cask font-jetbrains-mono-nerd-font
 
 elif [ "$OS" = "Linux" ]; then
-  sudo apt-get install -y tmux neovim fzf ripgrep fd-find bat jq direnv tldr htop stow ruby
+  case "$(uname -m)" in
+    aarch64|arm64) ARCH=arm64 ;;
+    *)             ARCH=x86_64 ;;
+  esac
+
+  # build-essential: C compiler for treesitter parsers; unzip: used by mason
+  sudo apt-get install -y tmux fzf ripgrep fd-find bat jq direnv tldr htop stow ruby \
+    build-essential unzip
+
+  # apt's neovim is too old for LazyVim — use the official release
+  if ! command -v nvim &>/dev/null; then
+    info "Installing neovim..."
+    curl -Lo /tmp/nvim.tar.gz "https://github.com/neovim/neovim/releases/latest/download/nvim-linux-${ARCH}.tar.gz"
+    sudo rm -rf /opt/nvim && sudo mkdir -p /opt/nvim
+    sudo tar xzf /tmp/nvim.tar.gz -C /opt/nvim --strip-components=1
+    sudo ln -sf /opt/nvim/bin/nvim /usr/local/bin/nvim
+  fi
+
+  if ! command -v tree-sitter &>/dev/null; then
+    info "Installing tree-sitter CLI..."
+    [ "$ARCH" = arm64 ] && TS_ARCH=arm64 || TS_ARCH=x64
+    curl -Lo /tmp/tree-sitter.gz "https://github.com/tree-sitter/tree-sitter/releases/latest/download/tree-sitter-linux-${TS_ARCH}.gz"
+    gunzip -f /tmp/tree-sitter.gz
+    sudo install /tmp/tree-sitter /usr/local/bin/tree-sitter
+  fi
+
+  if ! command -v node &>/dev/null; then
+    info "Installing node (LTS, for nvim tooling)..."
+    curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+    sudo apt-get install -y nodejs
+  fi
 
   # Debian/Ubuntu ship these under different names — the aliases expect fd/bat
   mkdir -p "$HOME/.local/bin"
@@ -149,8 +183,10 @@ elif [ "$OS" = "Linux" ]; then
 
   if ! command -v eza &>/dev/null; then
     info "Installing eza..."
-    wget -qO /tmp/eza.deb "https://github.com/eza-community/eza/releases/latest/download/eza_amd64.deb" \
-      && sudo dpkg -i /tmp/eza.deb
+    [ "$ARCH" = arm64 ] && EZA_ARCH=aarch64 || EZA_ARCH=x86_64
+    curl -Lo /tmp/eza.tar.gz "https://github.com/eza-community/eza/releases/latest/download/eza_${EZA_ARCH}-unknown-linux-gnu.tar.gz"
+    tar xzf /tmp/eza.tar.gz -C /tmp
+    sudo install /tmp/eza /usr/local/bin/eza
   fi
 
   if ! command -v zoxide &>/dev/null; then
@@ -165,14 +201,17 @@ elif [ "$OS" = "Linux" ]; then
 
   if ! command -v delta &>/dev/null; then
     info "Installing delta..."
-    wget -qO /tmp/delta.deb "https://github.com/dandavison/delta/releases/latest/download/git-delta_amd64.deb" \
-      && sudo dpkg -i /tmp/delta.deb
+    # release .debs are versioned (git-delta_<ver>_<arch>.deb), so look up the tag
+    DELTA_VERSION=$(curl -s "https://api.github.com/repos/dandavison/delta/releases/latest" | grep '"tag_name"' | sed -E 's/.*"v*([^"]+)".*/\1/')
+    [ "$ARCH" = arm64 ] && DEB_ARCH=arm64 || DEB_ARCH=amd64
+    curl -Lo /tmp/delta.deb "https://github.com/dandavison/delta/releases/latest/download/git-delta_${DELTA_VERSION}_${DEB_ARCH}.deb"
+    sudo dpkg -i /tmp/delta.deb
   fi
 
   if ! command -v lazygit &>/dev/null; then
     info "Installing lazygit..."
     LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep '"tag_name"' | sed -E 's/.*"v*([^"]+)".*/\1/')
-    curl -Lo /tmp/lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
+    curl -Lo /tmp/lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_${ARCH}.tar.gz"
     tar xf /tmp/lazygit.tar.gz -C /tmp lazygit
     sudo install /tmp/lazygit /usr/local/bin
   fi

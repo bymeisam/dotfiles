@@ -39,7 +39,8 @@ The installer is **idempotent**, so you can re-run it any time after pulling cha
 |---|---|---|
 | Package manager | Installs Homebrew if missing, puts it on `PATH` | `apt-get update` |
 | Shell | zsh as default shell, oh-my-zsh, `zsh-autosuggestions`, `zsh-syntax-highlighting` | same |
-| CLI tools | `tmux neovim fzf ripgrep fd bat eza zoxide jq gh starship git-delta lazygit direnv httpie tldr htop stow tmuxinator` + JetBrainsMono Nerd Font | same set, from apt or upstream installers; `fdfind`/`batcat` are linked as `fd`/`bat` |
+| CLI tools | `tmux neovim fzf ripgrep fd bat eza zoxide jq gh starship git-delta lazygit direnv httpie tldr htop stow tmuxinator` + JetBrainsMono Nerd Font | same set, from apt or upstream releases (x86_64 and arm64); `fdfind`/`batcat` are linked as `fd`/`bat` |
+| Neovim deps | `tree-sitter-cli` (builds parsers) and `node` (Copilot, mason's npm LSPs). fzf, ripgrep, fd and lazygit come from the row above | latest Neovim release (apt's is too old), `tree-sitter`, NodeSource LTS `node`, `build-essential`, `unzip` |
 | Symlinks | `stow`s every package below into `$HOME`. Real files in the way are renamed to `*.bak` | same |
 | SSH | Copies `ssh/.ssh_config` → `~/.ssh/config` **only if it doesn't exist** | same |
 | Neovim | Clones [bymeisam/lazyvim](https://github.com/bymeisam/lazyvim) → `~/.config/nvim`. A non-git `~/.config/nvim` is backed up first | same |
@@ -85,7 +86,7 @@ Only a template is tracked. To make a workspace: `tmuxinator copy sample myproje
 
 ## Version managers
 
-No version manager is installed by default, because every team picks its own. `.zshrc` activates whichever one it finds:
+No version manager is installed by default, because every team picks its own. A baseline `node` is installed so Neovim tooling works. A version manager puts its own node first on `PATH`, so projects still get the team's version. `.zshrc` activates whichever one it finds:
 
 1. **mise** if installed (`install.sh --with-mise`). It also reads `.nvmrc`, `.node-version` and `.tool-versions`, so it usually works with whatever a team uses.
 2. Otherwise **fnm** if installed.
