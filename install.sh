@@ -266,7 +266,7 @@ fi
 
 success "Dotfiles symlinked"
 
-# ── neovim (LazyVim config lives in its own repo) ─────────────────────────────
+# ── LazyVim (config lives in its own repo, based on the LazyVim starter) ──────
 if [ ! -d "$HOME/.config/nvim" ]; then
   info "Cloning LazyVim config..."
   git clone "$NVIM_REPO" "$HOME/.config/nvim"
@@ -277,6 +277,11 @@ elif [ ! -d "$HOME/.config/nvim/.git" ]; then
 else
   success "nvim config already present"
 fi
+
+# first headless run bootstraps lazy.nvim, which installs LazyVim + all plugins
+# at the versions pinned in lazy-lock.json, so first launch is ready
+info "Installing LazyVim and plugins (this can take a minute)..."
+nvim --headless "+Lazy! restore" +qa || warn "plugin install failed — open nvim and run :Lazy restore"
 
 # ── local overrides ───────────────────────────────────────────────────────────
 if [ ! -f "$HOME/.zshrc.local" ]; then

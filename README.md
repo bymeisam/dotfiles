@@ -29,7 +29,6 @@ Then:
    ```
 4. **Terminal font** — set it to `JetBrainsMono Nerd Font` (needed for `eza --icons` and starship glyphs).
 5. **Node/Go/etc.** — install whatever version manager the team uses (see [Version managers](#version-managers)).
-6. Open `nvim` once so LazyVim installs its plugins.
 
 The installer is **idempotent**, so you can re-run it any time after pulling changes.
 
@@ -43,7 +42,7 @@ The installer is **idempotent**, so you can re-run it any time after pulling cha
 | Neovim deps | `tree-sitter-cli` (builds parsers) and `node` (Copilot, mason's npm LSPs). fzf, ripgrep, fd and lazygit come from the row above | latest Neovim release (apt's is too old), `tree-sitter`, NodeSource LTS `node`, `build-essential`, `unzip` |
 | Symlinks | `stow`s every package below into `$HOME`. Real files in the way are renamed to `*.bak` | same |
 | SSH | Copies `ssh/.ssh_config` → `~/.ssh/config` **only if it doesn't exist** | same |
-| Neovim | Clones [bymeisam/lazyvim](https://github.com/bymeisam/lazyvim) → `~/.config/nvim`. A non-git `~/.config/nvim` is backed up first | same |
+| Neovim | Clones [bymeisam/lazyvim](https://github.com/bymeisam/lazyvim) → `~/.config/nvim` (a non-git `~/.config/nvim` is backed up first), then installs plugins at the versions in `lazy-lock.json` | same |
 | Local overrides | Creates an empty `~/.zshrc.local` | same |
 | `--with-mise` | Also installs [mise](https://mise.jdx.dev) | same |
 
