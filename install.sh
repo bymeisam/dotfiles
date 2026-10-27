@@ -141,7 +141,12 @@ if [ "$OS" = "Darwin" ]; then
   # from the team's version manager, which takes precedence on PATH)
   brew install tree-sitter-cli node
   # eza --icons and starship need a Nerd Font (set it in your terminal)
-  brew install --cask font-jetbrains-mono-nerd-font
+  # skip if already installed (manually or via brew) — brew errors on existing font files
+  if ls "$HOME/Library/Fonts" /Library/Fonts 2>/dev/null | grep -qi 'JetBrainsMonoNerdFont'; then
+    success "JetBrainsMono Nerd Font already installed"
+  else
+    brew install --cask font-jetbrains-mono-nerd-font || warn "font install failed — install JetBrainsMono Nerd Font manually"
+  fi
 
 elif [ "$OS" = "Linux" ]; then
   case "$(uname -m)" in
