@@ -301,7 +301,17 @@ echo "    next steps:"
 echo "    1. update email in ~/.gitconfig"
 echo "    2. generate ssh key: ssh-keygen -t ed25519 -C 'your@email.com'"
 echo "       then add it to GitHub: gh auth login"
-echo "    3. switch nvim remote to ssh: git -C ~/.config/nvim remote set-url origin git@github.com:bymeisam/lazyvim.git"
-echo "    4. set your terminal font to 'JetBrainsMono Nerd Font'"
-echo "    5. install a version manager if needed (re-run with --with-mise, or use the team's choice)"
+echo "    3. set your terminal font to 'JetBrainsMono Nerd Font'"
+echo "    4. install a version manager if needed (re-run with --with-mise, or use the team's choice)"
+# repos are cloned over https (no ssh key on a fresh machine) — fine for pulling;
+# to push, switch to ssh once your key is on GitHub
+for repo in "$DOTFILES" "$HOME/.config/nvim"; do
+  url="$(git -C "$repo" remote get-url origin 2>/dev/null || true)"
+  case "$url" in
+    https://github.com/*)
+      echo "    · to push from $repo, switch it to ssh:"
+      echo "      git -C $repo remote set-url origin git@github.com:${url#https://github.com/}"
+      ;;
+  esac
+done
 echo ""

@@ -29,7 +29,7 @@ It takes a few minutes and is safe to re-run. If it stops after the Xcode popup,
 |---|---|---|
 | 1 | Git identity | Check `name` / `email` in `~/.dotfiles/git/.gitconfig` |
 | 2 | SSH key + GitHub | `ssh-keygen -t ed25519 -C "you@example.com"` then `gh auth login` |
-| 3 | Switch repos to SSH so you can push | `git -C ~/.dotfiles remote set-url origin git@github.com:bymeisam/dotfiles.git`<br>`git -C ~/.config/nvim remote set-url origin git@github.com:bymeisam/lazyvim.git` |
+| 3 | Only if you'll push from this laptop: switch repos to SSH (the installer prints these if still on HTTPS), or `gh auth login` → HTTPS → let gh authenticate git | `git -C ~/.dotfiles remote set-url origin git@github.com:bymeisam/dotfiles.git`<br>`git -C ~/.config/nvim remote set-url origin git@github.com:bymeisam/lazyvim.git` |
 | 4 | Terminal font | Install a terminal (e.g. Ghostty) and set its font to **JetBrainsMono Nerd Font** |
 | 5 | Open `nvim` once | Mason downloads the language servers (TS, ESLint, Go, …) in the background |
 | 6 | Language runtimes | Install the team's version manager, plus Go if needed (see [Version managers](#version-managers)) |
